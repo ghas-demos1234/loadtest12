@@ -1,0 +1,105 @@
+name: Azure Load Test
+
+# Trigger configuration - you can modify this as needed
+on:
+  # Trigger on push to main branch
+  push:
+    branches: [ main ]
+  
+  # Allow manual triggering
+  workflow_dispatch:
+  
+  # Optional: Schedule to run automatically (uncomment if needed)
+  # schedule:
+  #   - cron: '0 9 * * 1'  # Run every Monday at 9 AM UTC
+
+env:
+  # Azure Load Test configuration
+  AZURE_LOAD_TEST_RESOURCE: testlidemo
+  AZURE_RESOURCE_GROUP: azureloadtest
+  AZURE_TEST_ID: 03efa96f-6d38-488a-a4db-1b099210e030
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Install Azure CLI
+    #- name: Install Azure CLI
+    #  run: |
+    #    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    
+    # Login to Azure using Service Principal
+    - name: Azure Login
+      run: |
+        az login --service-principal \
+          --username ${{ secrets.AZURE_CLIENT_ID }} \
+          --password ${{ secrets.AZURE_CLIENT_SECRET }} \
+          --tenant ${{ secrets.AZURE_TENANT_ID }}
+    
+    # Verify Azure CLI login
+    - name: Verify Azure CLI Login
+      run: |
+        az account show
+        echo "Successfully logged in to Azure"
+    
+    # Install Azure Load Testing CLI extension
+    - name: Install Azure Load Testing Extension
+      run: |
+        az extension add --name load
+    
+    # Generate unique test run ID
+    - name: Generate Test Run ID
+      run: |
+        TEST_RUN_ID="github-action-$(date +%Y%m%d-%H%M%S)-${{ github.run_number }}"
+        echo "TEST_RUN_ID=$TEST_RUN_ID" >> $GITHUB_ENV
+        echo "Generated Test Run ID: $TEST_RUN_ID"
+    
+    # Create and run the load test
+    - name: Run Azure Load Test
+      run: |
+        echo "Starting load test with ID: $TEST_RUN_ID"
+        az load test-run create \
+          --load-test-resource $AZURE_LOAD_TEST_RESOURCE \
+          --resource-group $AZURE_RESOURCE_GROUP \
+          --test-id $AZURE_TEST_ID \
+          --test-run-id $TEST_RUN_ID \
+          --no-wait
+        
+        echo "Load test started successfully!"
+        echo "Test Run ID: $TEST_RUN_ID"
+    
+    # Optional: Wait for test completion and get results
+    - name: Wait for Load Test Completion (Optional)
+      run: |
+        echo "Waiting for load test to complete..."
+        az load test-run show \
+          --load-test-resource $AZURE_LOAD_TEST_RESOURCE \
+          --resource-group $AZURE_RESOURCE_GROUP \
+          --test-run-id $TEST_RUN_ID
+    
+    # Optional: Download test results
+    - name: Download Test Results (Optional)
+      run: |
+        echo "Downloading test results..."
+        mkdir -p test-results
+        az load test-run download-files \
+          --load-test-resource $AZURE_LOAD_TEST_RESOURCE \
+          --resource-group $AZURE_RESOURCE_GROUP \
+          --test-run-id $TEST_RUN_ID \
+          --path ./test-results
+      continue-on-error: true
+    
+    # Upload test results as artifacts
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: load-test-results-${{ env.TEST_RUN_ID }}
+        path: test-results/
+        retention-days: 30
+      continue-on-error: true
