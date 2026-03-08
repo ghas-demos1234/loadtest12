@@ -17,7 +17,7 @@ env:
   # Azure Load Test configuration
   AZURE_LOAD_TEST_RESOURCE: testlidemo
   AZURE_RESOURCE_GROUP: azureloadtest
-  AZURE_TEST_ID: 03efa96f-6d38-488a-a4db-1b099210e030
+  AZURE_TEST_ID: 03efa96f-6d38-488a-a4db-1b09921de030
 
 jobs:
   load-test:
