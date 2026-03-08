@@ -48,9 +48,9 @@ jobs:
         echo "Successfully logged in to Azure"
     
     # Install Azure Load Testing CLI extension
-    - name: Install Azure Load Testing Extension
-      run: |
-        az extension add --name load
+   # - name: Install Azure Load Testing Extension
+      #run: |
+       # az extension add --name load
     
     # Generate unique test run ID
     - name: Generate Test Run ID
